@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Three.js + Oimo.js - Theo Jansen</title>
+    <script src="https://cdnjs.cloudflare.com"></script>
+    <script src="https://cdnjs.cloudflare.com"></script>
+    <style>body { margin: 0; overflow: hidden; }</style>
+</head>
+<body>
+<script>
+    // 1. CONFIGURARE SCENĂ THREE.JS
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(10, 20, 10);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
+    camera.position.set(0, 15, 30);
+    camera.lookAt(0, 5, 0);
+
+    // 2. CONFIGURARE MOTOR FIZIC OIMO.JS
+    const world = new OIMO.World({ 
+        timestep: 1/60, 
+        iterations: 8, 
+        broadphase: 2, 
+        worldscale: 1, 
+        random: true, 
+        info: false, 
+        gravity: [0, -9.8, 0] 
+    });
+
+    // Podeaua (3D)
+    const ground = world.add({size:[100, 1, 100], pos:[0, -0.5, 0], config:[1, 0.5, 0.2]});
+    const groundMesh = new THREE.Mesh(new THREE.BoxGeometry(100, 1, 100), new THREE.MeshPhongMaterial({color: 0x222222}));
+    scene.add(groundMesh);
+
+    // 3. LOGICA MECANISMULUI THEO JANSEN (Proporțiile "Sfinte")
+    // În Oimo/Three, definim legăturile ca obiecte rigide (Cubes/Cylinders)
+    function createLeg(xOffset) {
+        const size = [0.5, 0.5, 2]; // Grosime tije
+        // Acesta este un exemplu simplificat de adăugare a unui corp pivotant
+        const hip = world.add({type:'box', size:[2, 2, 2], pos:[xOffset, 5, 0], move:true});
+        const hipMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshPhongMaterial({color: 0xff0000}));
+        scene.add(hipMesh);
+
+        // În implementarea completă Oimo (vezi link-ul de mai jos), 
+        // aici se adaugă cele 11 tije folosind world.add({type:'jointHinge', ...})
+        return { body: hip, mesh: hipMesh };
+    }
+
+    const leg = createLeg(0);
+
+    // 4. LOOP-UL DE ANIMAȚIE
+    function animate() {
+        requestAnimationFrame(animate);
+        world.step(); // Calculul fizicii
+
+        // Sincronizare vizuală Three.js cu Fizica Oimo
+        leg.mesh.position.copy(leg.body.getPosition());
+        leg.mesh.quaternion.copy(leg.body.getQuaternion());
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+</script>
+
+<div style="position:absolute; top:10px; left:10px; color:white; font-family:sans-serif;">
+    Theo Jansen 3D (Simulare Oimo.js + Three.js)<br>
+    Sursa originală: <a href="https://github.com" style="color:cyan;">Oimo.js GitHub</a>
+</div>
+
+</body>
+</html>
